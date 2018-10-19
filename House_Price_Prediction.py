@@ -79,6 +79,14 @@ with tf.Session() as sess:
     display_every = 2
     num_training_iter = 50
 
+    #calculate the number of lines to animation
+    fit_num_plots = math.floor(num_training_iter/display_every)
+
+    #add storage of factor and offset values after each epoch
+    fit_size_factor = np.zeros(fit_num_plots)
+    fit_price_offsets = np.zeros(fit_num_plots)
+    fit_plot_idx = 0
+
     # keep iterating the training data
     for iteration in range(num_training_iter):
 
@@ -91,6 +99,11 @@ with tf.Session() as sess:
             c=sess.run(tf_cost,feed_dict= {tf_house_size : train_house_size_norm, tf_price : train_price_norm})
             print("Iteration #:",'%04d' % (iteration+1), "cost= ", "{:.9f}".format(c),\
                 "size_factor=", sess.run(tf_size_factor), "price_offset= ", sess.run(tf_price_offset))
+
+            #Save the fit size factor and price offset to allow animation of learning process
+            fit_size_factor[fit_plot_idx] = sess.run(tf_size_factor)
+            fit_price_offsets[fit_plot_idx] = sess.run(tf_price_offset)
+            fit_plot_idx = fit_plot_idx + 1
 
     print("Optimization finished!")
     training_cost = sess.run(tf_cost,feed_dict = {tf_house_size : train_house_size_norm, tf_price : train_price_norm})
@@ -117,6 +130,49 @@ with tf.Session() as sess:
 
     plt.legend(loc="upper left")
     plt.show()
+
+
+    # get values used to normalize data  so that we can denormalize data back to its original scale
+    train_house_size_mean = train_house_size.mean()
+    train_house_size_std = train_house_size.std()
+
+    train_price_mean = train_price.mean()
+    train_price_std = train_price.std()
+
+
+    #Plot another graph; animation of how Gradient Descent sequentially adjusted size_factor and price_offset  to 
+    #find the values that returned the best plot
+    fig, ax = plt.subplots()
+    line, =ax.plot(house_size,house_price)
+
+    plt.rcParams["figure.figsize"] = (10,8)
+    plt.title("Gradient Descent fitting regression line")
+    plt.ylabel("Price")
+    plt.xlabel("Size (sq.ft)")
+
+    plt.plot(train_house_size,train_price,'go',label='Training Data')
+    plt.plot(test_house_size,test_price,'mo',label='Testing Data')
+    
+    def animate(i):
+        line.set_xdata(train_house_size_norm*train_house_size_std+train_house_size_mean) #update the data
+        line.set_ydata((fit_size_factor[i]*train_house_size_norm + fit_price_offsets[i])* train_price_std + train_price_mean)
+        return line,
+
+    #Init only required for blitting to give a clean slate
+    def initAnim():
+        line.set_ydata(np.zeros(shape=house_price.shape[0])) # set y's to 0
+        return line,
+
+    ani = animation.FuncAnimation(fig,animate,frames = np.arange(0,fit_plot_idx),init_func=initAnim,
+                                    interval=1000,blit=True)
+
+    plt.show()
+
+
+
+
+
+
      
 
 
