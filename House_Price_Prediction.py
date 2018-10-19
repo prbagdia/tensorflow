@@ -90,10 +90,34 @@ with tf.Session() as sess:
         if (iteration+1)%display_every == 0:
             c=sess.run(tf_cost,feed_dict= {tf_house_size : train_house_size_norm, tf_price : train_price_norm})
             print("Iteration #:",'%04d' % (iteration+1), "cost= ", "{:.9f}".format(c),\
-                "size_factor=", sess.run(tf_size_factor), "proce_offset= ", sess.run(tf_price_offset))
+                "size_factor=", sess.run(tf_size_factor), "price_offset= ", sess.run(tf_price_offset))
 
     print("Optimization finished!")
     training_cost = sess.run(tf_cost,feed_dict = {tf_house_size : train_house_size_norm, tf_price : train_price_norm})
+    print("Trained cost=", training_cost,"size_factor=", sess.run(tf_size_factor),"price_offset=", sess.run(tf_price_offset), "\n")
+
+    train_house_size_mean = train_house_size.mean()
+    train_house_size_std = train_house_size.std()
+
+    train_price_mean = train_price.mean()
+    train_price_std = train_price.std()
+    
+
+    #Plot the graph
+    plt.rcParams["figure.figsize"] = (10,8)
+    plt.figure()
+    plt.ylabel("Price")
+    plt.xlabel("Size (sq.ft)")
+
+    plt.plot(train_house_size,train_price,'go',label='Training Data')
+    plt.plot(test_house_size,test_price,'mo',label='Testing Data')
+    plt.plot(train_house_size_norm*train_house_size_std+train_house_size_mean, 
+         (sess.run(tf_size_factor)*train_house_size_norm + sess.run(tf_price_offset))* train_price_std + train_price_mean,
+         label = "Learned Regression")
+
+    plt.legend(loc="upper left")
+    plt.show()
+     
 
 
 
